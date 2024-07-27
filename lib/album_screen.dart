@@ -3,10 +3,10 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
-import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
-import 'package:raja/image_data.dart';
-import 'package:raja/image_screen.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:raja/image_model.dart';
+import 'package:raja/object_screen.dart';
 
 class AlbumScreen extends StatefulWidget {
   const AlbumScreen({super.key});
@@ -16,7 +16,7 @@ class AlbumScreen extends StatefulWidget {
 }
 
 class _AlbumScreenState extends State<AlbumScreen> {
-  late Future<List<ImageData>> _thumbnailFilesFuture;
+  late Future<List<ImageModel>> _thumbnailFilesFuture;
 
   @override
   void initState() {
@@ -24,7 +24,7 @@ class _AlbumScreenState extends State<AlbumScreen> {
     _thumbnailFilesFuture = _loadThumbnails();
   }
 
-  Future<List<ImageData>> _loadThumbnails() async {
+  Future<List<ImageModel>> _loadThumbnails() async {
     final directory = Directory('/storage/emulated/0/test');
     if (!await directory.exists()) {
       return [];
@@ -42,7 +42,7 @@ class _AlbumScreenState extends State<AlbumScreen> {
       await thumbnailDir.create();
     }
 
-    final List<ImageData> thumbnails = [];
+    final List<ImageModel> thumbnails = [];
     for (var file in files) {
       final thumbnailPath = path.join(thumbnailDir.path, path.basename(file.path));
       final thumbnailFile = File(thumbnailPath);
@@ -53,7 +53,7 @@ class _AlbumScreenState extends State<AlbumScreen> {
         await thumbnailFile.writeAsBytes(Uint8List.fromList(img.encodeJpg(thumbnailImage)));
       }
 
-      thumbnails.add(ImageData(originalFile: file, thumbnailFile: thumbnailFile));
+      thumbnails.add(ImageModel(originalFile: file, thumbnailFile: thumbnailFile));
     }
 
     return thumbnails;
@@ -71,7 +71,7 @@ class _AlbumScreenState extends State<AlbumScreen> {
         ),
         centerTitle: true,
       ),
-      body: FutureBuilder<List<ImageData>>(
+      body: FutureBuilder<List<ImageModel>>(
         future: _thumbnailFilesFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -95,7 +95,7 @@ class _AlbumScreenState extends State<AlbumScreen> {
               final imageData = imageDataList[index];
               return InkWell(
                 onTap: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => ImageScreen(imageFile: imageData.originalFile)));
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => ObjectScreen(imageFile: imageData.originalFile)));
                 },
                 child: Hero(
                   tag: imageData.originalFile.path,

@@ -1,18 +1,20 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
+
 import 'helper/image_classification_helper.dart';
 
-class ImageScreen extends StatefulWidget {
+class ObjectScreen extends StatefulWidget {
   final File imageFile;
 
-  const ImageScreen({super.key, required this.imageFile});
+  const ObjectScreen({super.key, required this.imageFile});
 
   @override
-  State<ImageScreen> createState() => _ImageScreenState();
+  State<ObjectScreen> createState() => _ObjectScreenState();
 }
 
-class _ImageScreenState extends State<ImageScreen> {
+class _ObjectScreenState extends State<ObjectScreen> {
   late ImageClassificationHelper imageClassificationHelper;
   img.Image? image;
   Map<String, double>? classification;
@@ -67,29 +69,29 @@ class _ImageScreenState extends State<ImageScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       color: Colors.grey.shade900.withOpacity(0.5),
                       child: (isLoading)
-                          ? const SizedBox(height: 125,child: Center(child: CircularProgressIndicator(color: Colors.white)))
+                          ? const SizedBox(height: 125, child: Center(child: CircularProgressIndicator(color: Colors.white)))
                           : Column(
-                        children: [
-                          if (classification != null)
-                            ...(classification!.entries.toList()
-                              ..sort(
-                                    (a, b) => b.value.compareTo(a.value),
-                              ))
-                                .take(3)
-                                .map(
-                                  (e) => Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 8.0),
-                                child: Row(
-                                  children: [
-                                    Text(e.key, style: const TextStyle(color: Colors.white)),
-                                    const Spacer(),
-                                    Text('${(e.value * 100).toStringAsFixed(2)}%', style: const TextStyle(color: Colors.white))
-                                  ],
-                                ),
-                              ),
+                              children: [
+                                if (classification != null)
+                                  ...(classification!.entries.toList()
+                                        ..sort(
+                                          (a, b) => b.value.compareTo(a.value),
+                                        ))
+                                      .take(3)
+                                      .map(
+                                        (e) => Padding(
+                                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                          child: Row(
+                                            children: [
+                                              Text(e.key, style: const TextStyle(color: Colors.white)),
+                                              const Spacer(),
+                                              Text('${(e.value * 100).toStringAsFixed(2)}%', style: const TextStyle(color: Colors.white))
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                              ],
                             ),
-                        ],
-                      ),
                     ),
                   ),
                 ],
