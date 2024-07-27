@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
 import 'package:google_ml_kit/google_ml_kit.dart';
 import 'package:image_picker/image_picker.dart';
@@ -12,13 +11,14 @@ class FaceScreen extends StatefulWidget {
   const FaceScreen({super.key, required this.imageFile});
 
   @override
-  State<FaceScreen> createState() => _FaceScreenState();
+  _FaceScreenState createState() => _FaceScreenState();
 }
 
 class _FaceScreenState extends State<FaceScreen> {
   final FaceDetector faceDetector = GoogleMlKit.vision.faceDetector();
   late XFile _imageFile;
   List<Face> _faces = [];
+  List<ui.Image> _faceImages = [];
   ui.Image? _image;
 
   @override
@@ -32,10 +32,13 @@ class _FaceScreenState extends State<FaceScreen> {
     final inputImage = InputImage.fromFilePath(widget.imageFile.path);
     final List<Face> faces = await faceDetector.processImage(inputImage);
     final ui.Image image = await loadImage(File(photo.path));
+    final List<ui.Image> faceImages = await _extractFaces(image, faces);
+
     print('Faces detected: ${faces.length}');
     setState(() {
       _imageFile = photo;
       _faces = faces;
+      _faceImages = faceImages;
       _image = image;
     });
   }
@@ -48,6 +51,27 @@ class _FaceScreenState extends State<FaceScreen> {
     });
     stream.addListener(listener);
     return completer.future;
+  }
+
+  Future<List<ui.Image>> _extractFaces(ui.Image image, List<Face> faces) async {
+    final List<ui.Image> faceImages = [];
+    for (var face in faces) {
+      final ui.Image faceImage = await _cropImage(image, face.boundingBox);
+      faceImages.add(faceImage);
+    }
+    return faceImages;
+  }
+
+  Future<ui.Image> _cropImage(ui.Image image, Rect rect) async {
+    final pictureRecorder = ui.PictureRecorder();
+    final canvas = Canvas(pictureRecorder);
+    final paint = Paint();
+
+    canvas.drawImageRect(image, rect, Rect.fromLTWH(0, 0, rect.width, rect.height), paint);
+
+    final picture = pictureRecorder.endRecording();
+    final img = await picture.toImage(rect.width.toInt(), rect.height.toInt());
+    return img;
   }
 
   @override
@@ -84,13 +108,23 @@ class _FaceScreenState extends State<FaceScreen> {
                           height: 125,
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                           color: Colors.grey.shade900.withOpacity(0.5),
-                          child:  ListView.builder(
-                            itemCount: _faces.length,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal, // نمایش افقی لیست چهره‌ها
+                            itemCount: _faceImages.length,
                             itemBuilder: (context, index) {
-                              final face = _faces[index];
-                              return ListTile(
-                                title: Text('Face ${index + 1}'),
-                                subtitle: Text('Bounding Box: ${face.boundingBox.toString()}'),
+                              final faceImage = _faceImages[index];
+                              return Container(
+                                margin: EdgeInsets.all(8.0),
+                                width: 100,
+                                height: 100,
+                                child: FittedBox(
+                                  fit: BoxFit.cover,
+                                  child: SizedBox(
+                                    width: faceImage.width.toDouble(),
+                                    height: faceImage.height.toDouble(),
+                                    child: RawImage(image: faceImage),
+                                  ),
+                                ),
                               );
                             },
                           ),
