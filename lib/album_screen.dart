@@ -1,6 +1,11 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:image/image.dart' as img;
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
+import 'package:raja/image_data.dart';
 import 'package:raja/image_screen.dart';
 
 class AlbumScreen extends StatefulWidget {
@@ -11,22 +16,47 @@ class AlbumScreen extends StatefulWidget {
 }
 
 class _AlbumScreenState extends State<AlbumScreen> {
-  List<File> imageFiles = [];
+  late Future<List<ImageData>> _thumbnailFilesFuture;
 
   @override
   void initState() {
     super.initState();
-    _loadImages();
+    _thumbnailFilesFuture = _loadThumbnails();
   }
 
-  Future<void> _loadImages() async {
+  Future<List<ImageData>> _loadThumbnails() async {
     final directory = Directory('/storage/emulated/0/test');
-    final List<FileSystemEntity> entities = await directory.list().toList();
-    final List<File> files = entities.whereType<File>().where((file) => file.path.toLowerCase().endsWith('.jpg')).toList();
+    if (!await directory.exists()) {
+      return [];
+    }
 
-    setState(() {
-      imageFiles = files;
-    });
+    final List<FileSystemEntity> entities = await directory.list().toList();
+    final List<File> files = entities.whereType<File>().where((file) {
+      final extension = file.path.toLowerCase();
+      return extension.endsWith('.jpg') || extension.endsWith('.jpeg') || extension.endsWith('.png');
+    }).toList();
+
+    final tempDir = await getTemporaryDirectory();
+    final thumbnailDir = Directory('${tempDir.path}/thumbnails');
+    if (!await thumbnailDir.exists()) {
+      await thumbnailDir.create();
+    }
+
+    final List<ImageData> thumbnails = [];
+    for (var file in files) {
+      final thumbnailPath = path.join(thumbnailDir.path, path.basename(file.path));
+      final thumbnailFile = File(thumbnailPath);
+
+      if (!await thumbnailFile.exists()) {
+        final originalImage = img.decodeImage(await file.readAsBytes())!;
+        final thumbnailImage = img.copyResize(originalImage, width: 200, height: 200);
+        await thumbnailFile.writeAsBytes(Uint8List.fromList(img.encodeJpg(thumbnailImage)));
+      }
+
+      thumbnails.add(ImageData(originalFile: file, thumbnailFile: thumbnailFile));
+    }
+
+    return thumbnails;
   }
 
   @override
@@ -41,31 +71,44 @@ class _AlbumScreenState extends State<AlbumScreen> {
         ),
         centerTitle: true,
       ),
-      body: imageFiles.isEmpty
-          ? const Center(child: CircularProgressIndicator())
-          : GridView.builder(
-              // addAutomaticKeepAlives: false,
-              // addRepaintBoundaries: false,
-              // addSemanticIndexes: false,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 2.0,
-                mainAxisSpacing: 2.0,
-                childAspectRatio: 1 / 1,
-              ),
-              itemCount: imageFiles.length,
-              itemBuilder: (context, index) {
-                return InkWell(
-                  onTap: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => ImageScreen(imageFile: imageFiles[index])));
-                  },
+      body: FutureBuilder<List<ImageData>>(
+        future: _thumbnailFilesFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return const Center(child: Text('Error loading images', style: TextStyle(color: Colors.white)));
+          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(child: Text('No images found', style: TextStyle(color: Colors.white)));
+          }
+
+          final imageDataList = snapshot.data!;
+          return GridView.builder(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 2.0,
+              mainAxisSpacing: 2.0,
+              childAspectRatio: 1 / 1,
+            ),
+            itemCount: imageDataList.length,
+            itemBuilder: (context, index) {
+              final imageData = imageDataList[index];
+              return InkWell(
+                onTap: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => ImageScreen(imageFile: imageData.originalFile)));
+                },
+                child: Hero(
+                  tag: imageData.originalFile.path,
                   child: Image.file(
-                    imageFiles[index],
+                    imageData.thumbnailFile,
                     fit: BoxFit.cover,
                   ),
-                );
-              },
-            ),
+                ),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }

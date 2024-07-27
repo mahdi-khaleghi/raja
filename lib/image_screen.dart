@@ -54,7 +54,10 @@ class _ImageScreenState extends State<ImageScreen> {
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  Image.file(widget.imageFile),
+                  Hero(
+                    tag: widget.imageFile.path,
+                    child: Image.file(widget.imageFile),
+                  ),
                   Positioned(
                     bottom: 32,
                     left: 8,
