@@ -7,7 +7,9 @@ import 'package:google_ml_kit/google_ml_kit.dart';
 import 'package:image_picker/image_picker.dart';
 
 class FaceScreen extends StatefulWidget {
-  const FaceScreen({super.key});
+  final File imageFile;
+
+  const FaceScreen({super.key, required this.imageFile});
 
   @override
   State<FaceScreen> createState() => _FaceScreenState();
@@ -15,29 +17,27 @@ class FaceScreen extends StatefulWidget {
 
 class _FaceScreenState extends State<FaceScreen> {
   final FaceDetector faceDetector = GoogleMlKit.vision.faceDetector();
-  XFile? _imageFile;
+  late XFile _imageFile;
   List<Face> _faces = [];
   ui.Image? _image;
 
-  Future<void> pickImage() async {
-    final ImagePicker _picker = ImagePicker();
-    final XFile? photo = await _picker.pickImage(source: ImageSource.gallery);
-    if (photo != null) {
-      final List<Face> faces = await detectFaces(photo);
-      final ui.Image image = await loadImage(File(photo.path));
-      print('Faces detected: ${faces.length}'); // Log تعداد صورت‌های شناسایی‌شده
-      setState(() {
-        _imageFile = photo;
-        _faces = faces;
-        _image = image;
-      });
-    }
+  @override
+  void initState() {
+    super.initState();
+    detectFaces();
   }
 
-  Future<List<Face>> detectFaces(XFile imageFile) async {
-    final inputImage = InputImage.fromFilePath(imageFile.path);
+  Future<void> detectFaces() async {
+    final XFile photo = XFile(widget.imageFile.path);
+    final inputImage = InputImage.fromFilePath(widget.imageFile.path);
     final List<Face> faces = await faceDetector.processImage(inputImage);
-    return faces;
+    final ui.Image image = await loadImage(File(photo.path));
+    print('Faces detected: ${faces.length}');
+    setState(() {
+      _imageFile = photo;
+      _faces = faces;
+      _image = image;
+    });
   }
 
   Future<ui.Image> loadImage(File file) async {
@@ -59,41 +59,66 @@ class _FaceScreenState extends State<FaceScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Face Detection'),
-      ),
-      body: Center(
-        child: _imageFile == null
-            ? const Text('No image selected.')
-            : Column(
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: Stack(
+                alignment: Alignment.center,
                 children: [
-                  Expanded(
-                    child: _image == null
-                        ? const CircularProgressIndicator()
-                        : FittedBox(
-                            child: SizedBox(
-                              width: _image!.width.toDouble(),
-                              height: _image!.height.toDouble(),
-                              child: Stack(
-                                fit: StackFit.expand,
-                                children: [
-                                  Image.file(File(_imageFile!.path)),
-                                  CustomPaint(
-                                    painter: FacePainter(_faces, _image!.width.toDouble(), _image!.height.toDouble()),
-                                    child: Container(),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
+                  Hero(
+                    tag: widget.imageFile.path,
+                    child: Image.file(widget.imageFile),
                   ),
-                  Text('Faces detected: ${_faces.length}'), // نمایش تعداد صورت‌های شناسایی‌شده
+                  Positioned(
+                    bottom: 32,
+                    left: 8,
+                    right: 8,
+                    child: Column(
+                      children: [
+                        Text('Faces detected: ${_faces.length}', style: const TextStyle(color: Colors.white)),
+                        const SizedBox(height: 16),
+                        Container(
+                          width: double.infinity,
+                          height: 125,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                          color: Colors.grey.shade900.withOpacity(0.5),
+                          child:  ListView.builder(
+                            itemCount: _faces.length,
+                            itemBuilder: (context, index) {
+                              final face = _faces[index];
+                              return ListTile(
+                                title: Text('Face ${index + 1}'),
+                                subtitle: Text('Bounding Box: ${face.boundingBox.toString()}'),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  /* FittedBox(
+                    child: SizedBox(
+                      width: _image!.width.toDouble(),
+                      height: _image!.height.toDouble(),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.file(File(_imageFile!.path)),
+                          CustomPaint(
+                            painter: FacePainter(_faces, _image!.width.toDouble(), _image!.height.toDouble()),
+                            child: Container(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),*/
                 ],
               ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: pickImage,
-        child: const Icon(Icons.add),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -110,7 +135,7 @@ class FacePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 20.0
+      ..strokeWidth = 5.0
       ..color = Colors.red;
 
     final double scaleX = size.width / originalWidth;
@@ -123,7 +148,7 @@ class FacePainter extends CustomPainter {
         face.boundingBox.right * scaleX,
         face.boundingBox.bottom * scaleY,
       );
-      print('Face bounding box: $rect'); // Log اطلاعات مربوط به هر صورت شناسایی‌شده
+      print('Face bounding box: $rect');
       canvas.drawRect(rect, paint);
     }
   }

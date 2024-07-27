@@ -64,34 +64,40 @@ class _ObjectScreenState extends State<ObjectScreen> {
                     bottom: 32,
                     left: 8,
                     right: 8,
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      color: Colors.grey.shade900.withOpacity(0.5),
-                      child: (isLoading)
-                          ? const SizedBox(height: 125, child: Center(child: CircularProgressIndicator(color: Colors.white)))
-                          : Column(
-                              children: [
-                                if (classification != null)
-                                  ...(classification!.entries.toList()
-                                        ..sort(
-                                          (a, b) => b.value.compareTo(a.value),
-                                        ))
-                                      .take(3)
-                                      .map(
-                                        (e) => Padding(
-                                          padding: const EdgeInsets.symmetric(vertical: 8.0),
-                                          child: Row(
-                                            children: [
-                                              Text(e.key, style: const TextStyle(color: Colors.white)),
-                                              const Spacer(),
-                                              Text('${(e.value * 100).toStringAsFixed(2)}%', style: const TextStyle(color: Colors.white))
-                                            ],
+                    child: Column(
+                      children: [
+                        const Text('No face found in the image! Possible classification:', style: TextStyle(color: Colors.white)),
+                        const SizedBox(height: 16),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                          color: Colors.grey.shade900.withOpacity(0.5),
+                          child: (isLoading)
+                              ? const SizedBox(height: 125, child: Center(child: CircularProgressIndicator(color: Colors.white)))
+                              : Column(
+                                  children: [
+                                    if (classification != null)
+                                      ...(classification!.entries.toList()
+                                            ..sort(
+                                              (a, b) => b.value.compareTo(a.value),
+                                            ))
+                                          .take(3)
+                                          .map(
+                                            (e) => Padding(
+                                              padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                              child: Row(
+                                                children: [
+                                                  Text(e.key, style: const TextStyle(color: Colors.white)),
+                                                  const Spacer(),
+                                                  Text('${(e.value * 100).toStringAsFixed(2)}%', style: const TextStyle(color: Colors.white))
+                                                ],
+                                              ),
+                                            ),
                                           ),
-                                        ),
-                                      ),
-                              ],
-                            ),
+                                  ],
+                                ),
+                        ),
+                      ],
                     ),
                   ),
                 ],

@@ -1,10 +1,13 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:google_ml_kit/google_ml_kit.dart';
 import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
+import 'package:raja/face_screen.dart';
 import 'package:raja/image_model.dart';
 import 'package:raja/object_screen.dart';
 
@@ -17,6 +20,7 @@ class AlbumScreen extends StatefulWidget {
 
 class _AlbumScreenState extends State<AlbumScreen> {
   late Future<List<ImageModel>> _thumbnailFilesFuture;
+  final FaceDetector faceDetector = GoogleMlKit.vision.faceDetector();
 
   @override
   void initState() {
@@ -43,7 +47,7 @@ class _AlbumScreenState extends State<AlbumScreen> {
     }
 
     final List<ImageModel> thumbnails = [];
-    for (var file in files) {
+    for (var file in files.reversed) {
       final thumbnailPath = path.join(thumbnailDir.path, path.basename(file.path));
       final thumbnailFile = File(thumbnailPath);
 
@@ -94,14 +98,12 @@ class _AlbumScreenState extends State<AlbumScreen> {
             itemBuilder: (context, index) {
               final imageData = imageDataList[index];
               return InkWell(
-                onTap: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => ObjectScreen(imageFile: imageData.originalFile)));
-                },
+                onTap: () => isHaveFaces(imageData.originalFile),
                 child: Hero(
                   tag: imageData.originalFile.path,
                   child: Image.file(
                     imageData.thumbnailFile,
-                    fit: BoxFit.cover,
+                    fit: BoxFit.none,
                   ),
                 ),
               );
@@ -110,5 +112,15 @@ class _AlbumScreenState extends State<AlbumScreen> {
         },
       ),
     );
+  }
+
+  Future<void> isHaveFaces(File image) async {
+    final inputImage = InputImage.fromFilePath(image.path);
+    List<Face> faces = await faceDetector.processImage(inputImage);
+    Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => (faces.isNotEmpty) ? FaceScreen(imageFile: image) : ObjectScreen(imageFile: image),
+        ));
   }
 }
