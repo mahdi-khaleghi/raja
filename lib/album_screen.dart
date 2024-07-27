@@ -57,7 +57,7 @@ class _AlbumScreenState extends State<AlbumScreen> {
               itemBuilder: (context, index) {
                 return InkWell(
                   onTap: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => ImageScreen(index: index)));
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => ImageScreen(imageFile: imageFiles[index])));
                   },
                   child: Image.file(
                     imageFiles[index],
