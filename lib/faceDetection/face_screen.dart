@@ -6,8 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:google_ml_kit/google_ml_kit.dart';
 import 'package:image_picker/image_picker.dart';
 
-import 'face_painter.dart';
-
 class FaceScreen extends StatefulWidget {
   final File imageFile;
 
@@ -21,7 +19,6 @@ class _FaceScreenState extends State<FaceScreen> {
   final FaceDetector faceDetector = GoogleMlKit.vision.faceDetector();
   List<Face> _faces = [];
   List<ui.Image> _faceImages = [];
-  ui.Image? _image;
 
   @override
   void initState() {
@@ -42,59 +39,54 @@ class _FaceScreenState extends State<FaceScreen> {
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Hero(
                 tag: widget.imageFile.path,
-                child: FittedBox(
-                  child: SizedBox(
-                    width: _image!.width.toDouble(),
-                    height: _image!.height.toDouble(),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        Image.file(File(widget.imageFile.path)),
-                        CustomPaint(
-                          painter: FacePainter(_faces, _image!.width.toDouble(), _image!.height.toDouble()),
-                          child: Container(),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                child: Image.file(widget.imageFile),
               ),
-              const SizedBox(height: 32),
-              Text('Faces detected: ${_faces.length}', style: const TextStyle(color: Colors.white)),
-              const SizedBox(height: 16),
-              Wrap(
-                children: List.generate(
-                  _faceImages.length,
-                  (int index) {
-                    final faceImage = _faceImages[index];
-                    return Column(
-                      children: [
-                        Container(
-                          margin: const EdgeInsets.all(8.0),
-                          width: 100,
-                          height: 100,
-                          child: ClipOval(
-                            child: AspectRatio(
-                              aspectRatio: 1.0,
-                              child: FittedBox(
-                                fit: BoxFit.cover,
-                                child: SizedBox(
-                                  width: faceImage.width.toDouble(),
-                                  height: faceImage.height.toDouble(),
-                                  child: RawImage(image: faceImage),
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 32),
+                    const Text('Faces detected:', style: TextStyle(color: Colors.white)),
+                    const SizedBox(height: 16),
+                    Wrap(
+                      spacing: 14,
+                      runSpacing: 16,
+                      children: List.generate(
+                        _faceImages.length,
+                        (int index) {
+                          final faceImage = _faceImages[index];
+                          return Column(
+                            children: [
+                              SizedBox(
+                                width: 64,
+                                height: 64,
+                                child: ClipOval(
+                                  child: AspectRatio(
+                                    aspectRatio: 1.0,
+                                    child: FittedBox(
+                                      fit: BoxFit.cover,
+                                      child: SizedBox(
+                                        width: faceImage.width.toDouble(),
+                                        height: faceImage.height.toDouble(),
+                                        child: RawImage(image: faceImage),
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
-                        ),
-                        const Text('?', style: TextStyle(color: Colors.white)),
-                        const SizedBox(height: 12),
-                      ],
-                    );
-                  },
+                              const SizedBox(height: 8),
+                              const Text('?', style: TextStyle(color: Colors.white)),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -114,7 +106,6 @@ class _FaceScreenState extends State<FaceScreen> {
     setState(() {
       _faces = faces;
       _faceImages = faceImages;
-      _image = image;
     });
   }
 
