@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_ml_kit/google_ml_kit.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:raja/find/find_screen.dart';
 
 class FaceScreen extends StatefulWidget {
   final File imageFile;
@@ -60,28 +61,37 @@ class _FaceScreenState extends State<FaceScreen> {
                         _faceImages.length,
                         (int index) {
                           final faceImage = _faceImages[index];
-                          return Column(
-                            children: [
-                              SizedBox(
-                                width: 64,
-                                height: 64,
-                                child: ClipOval(
-                                  child: AspectRatio(
-                                    aspectRatio: 1.0,
-                                    child: FittedBox(
-                                      fit: BoxFit.cover,
-                                      child: SizedBox(
-                                        width: faceImage.width.toDouble(),
-                                        height: faceImage.height.toDouble(),
-                                        child: RawImage(image: faceImage),
+                          return InkWell(
+                            onTap: () {
+                              Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => FindScreen(faceImage: faceImage),
+                                  ));
+                            },
+                            child: Column(
+                              children: [
+                                SizedBox(
+                                  width: 64,
+                                  height: 64,
+                                  child: ClipOval(
+                                    child: AspectRatio(
+                                      aspectRatio: 1.0,
+                                      child: FittedBox(
+                                        fit: BoxFit.cover,
+                                        child: SizedBox(
+                                          width: faceImage.width.toDouble(),
+                                          height: faceImage.height.toDouble(),
+                                          child: RawImage(image: faceImage),
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(height: 8),
-                              const Text('?', style: TextStyle(color: Colors.white)),
-                            ],
+                                const SizedBox(height: 8),
+                                const Text('?', style: TextStyle(color: Colors.white)),
+                              ],
+                            ),
                           );
                         },
                       ),
