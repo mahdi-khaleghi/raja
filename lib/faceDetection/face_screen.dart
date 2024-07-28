@@ -4,7 +4,6 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:google_ml_kit/google_ml_kit.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:raja/find/find_screen.dart';
 
 class FaceScreen extends StatefulWidget {
@@ -18,13 +17,12 @@ class FaceScreen extends StatefulWidget {
 
 class _FaceScreenState extends State<FaceScreen> {
   final FaceDetector faceDetector = GoogleMlKit.vision.faceDetector();
-  List<Face> _faces = [];
-  List<ui.Image> _faceImages = [];
+  late Future<List<ui.Image>> _futureFaceImages;
 
   @override
   void initState() {
     super.initState();
-    detectFaces();
+    _futureFaceImages = detectFaces();
   }
 
   @override
@@ -48,55 +46,68 @@ class _FaceScreenState extends State<FaceScreen> {
               ),
               Padding(
                 padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 32),
-                    const Text('Faces detected:', style: TextStyle(color: Colors.white)),
-                    const SizedBox(height: 16),
-                    Wrap(
-                      spacing: 14,
-                      runSpacing: 16,
-                      children: List.generate(
-                        _faceImages.length,
-                        (int index) {
-                          final faceImage = _faceImages[index];
-                          return InkWell(
-                            onTap: () {
-                              Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => FindScreen(faceImage: faceImage),
-                                  ));
-                            },
-                            child: Column(
-                              children: [
-                                SizedBox(
-                                  width: 64,
-                                  height: 64,
-                                  child: ClipOval(
-                                    child: AspectRatio(
-                                      aspectRatio: 1.0,
-                                      child: FittedBox(
-                                        fit: BoxFit.cover,
-                                        child: SizedBox(
-                                          width: faceImage.width.toDouble(),
-                                          height: faceImage.height.toDouble(),
-                                          child: RawImage(image: faceImage),
+                child: FutureBuilder<List<ui.Image>>(
+                  future: _futureFaceImages,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    } else if (snapshot.hasError) {
+                      return const Center(child: Text('Error occurred', style: TextStyle(color: Colors.white)));
+                    } else {
+                      final faceImages = snapshot.data!;
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 32),
+                          const Text('Faces detected:', style: TextStyle(color: Colors.white)),
+                          const SizedBox(height: 16),
+                          Wrap(
+                            spacing: 14,
+                            runSpacing: 16,
+                            children: List.generate(
+                              faceImages.length,
+                              (int index) {
+                                final faceImage = faceImages[index];
+                                return InkWell(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => FindScreen(faceImage: faceImage),
+                                      ),
+                                    );
+                                  },
+                                  child: Column(
+                                    children: [
+                                      SizedBox(
+                                        width: 64,
+                                        height: 64,
+                                        child: ClipOval(
+                                          child: AspectRatio(
+                                            aspectRatio: 1.0,
+                                            child: FittedBox(
+                                              fit: BoxFit.cover,
+                                              child: SizedBox(
+                                                width: faceImage.width.toDouble(),
+                                                height: faceImage.height.toDouble(),
+                                                child: RawImage(image: faceImage),
+                                              ),
+                                            ),
+                                          ),
                                         ),
                                       ),
-                                    ),
+                                      const SizedBox(height: 8),
+                                      const Text('?', style: TextStyle(color: Colors.white)),
+                                    ],
                                   ),
-                                ),
-                                const SizedBox(height: 8),
-                                const Text('?', style: TextStyle(color: Colors.white)),
-                              ],
+                                );
+                              },
                             ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
+                          ),
+                        ],
+                      );
+                    }
+                  },
                 ),
               ),
             ],
@@ -106,23 +117,18 @@ class _FaceScreenState extends State<FaceScreen> {
     );
   }
 
-  Future<void> detectFaces() async {
-    final XFile photo = XFile(widget.imageFile.path);
+  Future<List<ui.Image>> detectFaces() async {
     final inputImage = InputImage.fromFilePath(widget.imageFile.path);
     final List<Face> faces = await faceDetector.processImage(inputImage);
-    final ui.Image image = await loadImage(File(photo.path));
+    final ui.Image image = await loadImage(widget.imageFile);
     final List<ui.Image> faceImages = await _extractFaces(image, faces);
-
-    setState(() {
-      _faces = faces;
-      _faceImages = faceImages;
-    });
+    return faceImages;
   }
 
   Future<ui.Image> loadImage(File file) async {
     final Completer<ui.Image> completer = Completer();
     final ImageStream stream = FileImage(file).resolve(const ImageConfiguration());
-    final ImageStreamListener listener = ImageStreamListener((ImageInfo info, bool _) {
+    final listener = ImageStreamListener((ImageInfo info, bool _) {
       completer.complete(info.image);
     });
     stream.addListener(listener);
