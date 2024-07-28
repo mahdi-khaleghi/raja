@@ -2,8 +2,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
+import 'package:raja/objectDetection/helper/image_classification_helper.dart';
 
-import 'helper/image_classification_helper.dart';
 
 class ObjectScreen extends StatefulWidget {
   final File imageFile;

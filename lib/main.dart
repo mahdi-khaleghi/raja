@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:raja/album_screen.dart';
+import 'package:raja/home/album_screen.dart';
 
 void main() {
   runApp(const MyApp());
