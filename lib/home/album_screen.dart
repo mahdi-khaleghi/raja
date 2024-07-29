@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_ml_kit/google_ml_kit.dart';
 import 'package:image/image.dart' as img;
@@ -10,7 +10,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:raja/faceDetection/face_screen.dart';
 import 'package:raja/home/image_model.dart';
 import 'package:raja/objectDetection/object_screen.dart';
-import 'package:flutter/foundation.dart';
 
 class AlbumScreen extends StatefulWidget {
   const AlbumScreen({super.key});
@@ -66,7 +65,7 @@ class _AlbumScreenState extends State<AlbumScreen> {
       }
 
       thumbnails.add(ImageModel(originalFile: file, thumbnailFile: thumbnailFile));
-      _streamController.add(thumbnails.toList());  // Add a copy to trigger UI update
+      _streamController.add(thumbnails.toList()); // Add a copy to trigger UI update
     }
 
     _streamController.close(); // Close the stream after all images are processed
@@ -75,8 +74,35 @@ class _AlbumScreenState extends State<AlbumScreen> {
   static Future<Uint8List> _generateThumbnail(String filePath) async {
     final file = File(filePath);
     final originalImage = img.decodeImage(await file.readAsBytes())!;
-    final thumbnailImage = img.copyResize(originalImage, width: 200, height: 200);
-    return Uint8List.fromList(img.encodeJpg(thumbnailImage));
+
+    // Calculate the aspect ratio of the original image and the target thumbnail
+    const aspectRatio = 1.0; // 100 / 100
+
+    // Determine the dimensions for cropping
+    int cropWidth, cropHeight;
+    if (originalImage.width > originalImage.height) {
+      cropHeight = originalImage.height;
+      cropWidth = (originalImage.height * aspectRatio).toInt();
+    } else {
+      cropWidth = originalImage.width;
+      cropHeight = (originalImage.width / aspectRatio).toInt();
+    }
+
+    // Calculate the crop position (center crop)
+    final offsetX = (originalImage.width - cropWidth) ~/ 2;
+    final offsetY = (originalImage.height - cropHeight) ~/ 2;
+
+    // Crop the image
+    final croppedImage = img.copyCrop(originalImage, x: offsetX, y: offsetY, width: cropWidth, height: cropHeight);
+
+    // Resize the cropped image to the target size with high quality
+    final thumbnailImage = img.copyResize(croppedImage, width: 200, height: 200, interpolation: img.Interpolation.cubic);
+
+    // Encode the image as JPEG with high quality
+    // return Uint8List.fromList(img.encodeJpg(thumbnailImage, quality: 90)); // Adjust the quality parameter as needed
+
+    // Encode the image as PNG without compression loss
+    return Uint8List.fromList(img.encodePng(thumbnailImage));
   }
 
   @override
@@ -95,7 +121,7 @@ class _AlbumScreenState extends State<AlbumScreen> {
         stream: _streamController.stream,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator(color: Colors.white));
           } else if (snapshot.hasError) {
             return const Center(child: Text('Error loading images', style: TextStyle(color: Colors.white)));
           } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
