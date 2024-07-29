@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -9,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:raja/faceDetection/face_screen.dart';
 import 'package:raja/home/image_model.dart';
 import 'package:raja/objectDetection/object_screen.dart';
+import 'package:flutter/foundation.dart';
 
 class AlbumScreen extends StatefulWidget {
   const AlbumScreen({super.key});
@@ -18,19 +20,27 @@ class AlbumScreen extends StatefulWidget {
 }
 
 class _AlbumScreenState extends State<AlbumScreen> {
-  late Future<List<ImageModel>> _thumbnailFilesFuture;
   final FaceDetector faceDetector = GoogleMlKit.vision.faceDetector();
+  final StreamController<List<ImageModel>> _streamController = StreamController<List<ImageModel>>();
 
   @override
   void initState() {
     super.initState();
-    _thumbnailFilesFuture = _loadThumbnails();
+    _loadThumbnails();
   }
 
-  Future<List<ImageModel>> _loadThumbnails() async {
+  @override
+  void dispose() {
+    _streamController.close();
+    super.dispose();
+  }
+
+  Future<void> _loadThumbnails() async {
     final directory = Directory('/storage/emulated/0/test');
     if (!await directory.exists()) {
-      return [];
+      _streamController.add([]);
+      _streamController.close();
+      return;
     }
 
     final List<FileSystemEntity> entities = await directory.list().toList();
@@ -51,15 +61,22 @@ class _AlbumScreenState extends State<AlbumScreen> {
       final thumbnailFile = File(thumbnailPath);
 
       if (!await thumbnailFile.exists()) {
-        final originalImage = img.decodeImage(await file.readAsBytes())!;
-        final thumbnailImage = img.copyResize(originalImage, width: 200, height: 200);
-        await thumbnailFile.writeAsBytes(Uint8List.fromList(img.encodeJpg(thumbnailImage)));
+        final Uint8List imgData = await compute(_generateThumbnail, file.path);
+        await thumbnailFile.writeAsBytes(imgData);
       }
 
       thumbnails.add(ImageModel(originalFile: file, thumbnailFile: thumbnailFile));
+      _streamController.add(thumbnails.toList());  // Add a copy to trigger UI update
     }
 
-    return thumbnails;
+    _streamController.close(); // Close the stream after all images are processed
+  }
+
+  static Future<Uint8List> _generateThumbnail(String filePath) async {
+    final file = File(filePath);
+    final originalImage = img.decodeImage(await file.readAsBytes())!;
+    final thumbnailImage = img.copyResize(originalImage, width: 200, height: 200);
+    return Uint8List.fromList(img.encodeJpg(thumbnailImage));
   }
 
   @override
@@ -74,10 +91,10 @@ class _AlbumScreenState extends State<AlbumScreen> {
         ),
         centerTitle: true,
       ),
-      body: FutureBuilder<List<ImageModel>>(
-        future: _thumbnailFilesFuture,
+      body: StreamBuilder<List<ImageModel>>(
+        stream: _streamController.stream,
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           } else if (snapshot.hasError) {
             return const Center(child: Text('Error loading images', style: TextStyle(color: Colors.white)));
@@ -102,7 +119,7 @@ class _AlbumScreenState extends State<AlbumScreen> {
                   tag: imageData.originalFile.path,
                   child: Image.file(
                     imageData.thumbnailFile,
-                    fit: BoxFit.none,
+                    fit: BoxFit.cover,
                   ),
                 ),
               );

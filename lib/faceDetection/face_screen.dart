@@ -50,7 +50,10 @@ class _FaceScreenState extends State<FaceScreen> {
                   future: _futureFaceImages,
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
+                      return const Padding(
+                        padding: EdgeInsets.all(64.0),
+                        child: Center(child: CircularProgressIndicator(color: Colors.white)),
+                      );
                     } else if (snapshot.hasError) {
                       return const Center(child: Text('Error occurred', style: TextStyle(color: Colors.white)));
                     } else {
